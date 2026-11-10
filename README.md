@@ -15,6 +15,10 @@ TekTık Video, Chrome ve Edge için bir Windows video indiricisidir. Eklenti sim
 1. İndirme iznin olan bir videoyu aç ve araç çubuğundaki **TekTık Video** simgesine bir kez bas.
 2. İlerlemeyi simge rozetinden takip et. Simgeye sağ tıklayıp **İndirmeleri göster** seçeneğini açarak durumu görebilir ve kayıt klasörüne gidebilirsin. Bir video veya video bağlantısına sağ tıklayarak da indirmeyi başlatabilirsin.
 
+Bir bağlantıyı kopyaladıysan **İndirmeleri göster** ekranındaki alana yapıştırıp **MP3** veya **Video** seçerek indirebilirsin. YouTube Music tek parça bağlantıları ses dosyası olarak işlenir. yt-dlp'nin desteklediği erişilebilir SoundCloud ve Bandcamp parça bağlantıları da denenebilir; site desteği değişebilir. Çalma listesi yerine tek parça bağlantısı kullan.
+
+Spotify bağlantılarından ses dosyası indirilemez. Uygulama bu bağlantılar için açıklayıcı bir hata gösterir; Spotify içeriğini çevrimdışı dinlemek için Spotify'ın kendi özelliğini kullan.
+
 **İndirmeleri göster** ekranında sonraki indirmeler için video kalitesini, yalnızca ses (MP3) seçimini, en uzun video süresini ve kayıt klasörünü ayarlayabilirsin. Varsayılan seçim en iyi mevcut kalite, video ve ses, sınırsız video süresi ve İndirilenler klasörüdür. Süre sınırı seçildiğinde süresini bildirmeyen videolar da elenir. Video süresi ile tahmini dosya boyutu kaynak tarafından sağlanırsa indirme satırında gösterilir. Dosya boyutu tahmini kesin bir indirme kotası değildir.
 
 Oturum isteyen bir sitede video sayfasına sağ tıklayıp **Bu sitenin oturum çerezleriyle indir** seçeneğini kullanabilirsin. Tarayıcı ilgili site için çerez erişim izni ister. Bu işlem site oturumunu yalnızca o indirmede yerel yardımcıya aktarır. Çerezler geçici dosyada tutulur ve işlem sonunda silinir. Oturumla indirme bazı sitelerde yine başarısız olabilir.

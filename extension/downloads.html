@@ -54,6 +54,26 @@
 
     <p id="folder-message" class="notice" role="status" hidden></p>
 
+    <section class="link-entry" aria-labelledby="link-title">
+      <div>
+        <p class="eyebrow">BAĞLANTIDAN İNDİR</p>
+        <h2 id="link-title">Video veya müzik bağlantısı yapıştır</h2>
+        <p>YouTube Music ve desteklenen açık içeriklerin tek parça bağlantısını kullan.</p>
+      </div>
+      <form id="link-form" class="link-form">
+        <label class="visually-hidden" for="link-url">İçerik bağlantısı</label>
+        <input id="link-url" type="url" inputmode="url" required placeholder="https://music.youtube.com/watch?v=..." autocomplete="url">
+        <label class="visually-hidden" for="link-mode">Dosya türü</label>
+        <select id="link-mode" aria-label="Dosya türü">
+          <option value="audio">MP3</option>
+          <option value="video">Video</option>
+        </select>
+        <button type="submit" id="link-submit">İndir</button>
+      </form>
+      <p id="link-message" class="link-message" role="status" hidden></p>
+      <p class="link-note">Spotify bağlantıları ses dosyası olarak indirilemez. Çalma listesi yerine tek parça bağlantısı yapıştır.</p>
+    </section>
+
     <section class="settings" aria-labelledby="settings-title">
       <div class="settings-heading">
         <h2 id="settings-title">İndirme ayarları</h2>

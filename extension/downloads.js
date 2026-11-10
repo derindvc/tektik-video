@@ -14,6 +14,34 @@ const quality = document.querySelector("#quality");
 const maxMinutes = document.querySelector("#max-minutes");
 const folderPath = document.querySelector("#folder-path");
 const chooseFolder = document.querySelector("#choose-folder");
+const linkForm = document.querySelector("#link-form");
+const linkUrl = document.querySelector("#link-url");
+const linkMode = document.querySelector("#link-mode");
+const linkSubmit = document.querySelector("#link-submit");
+const linkMessage = document.querySelector("#link-message");
+
+linkForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  linkSubmit.disabled = true;
+  linkMessage.hidden = true;
+  try {
+    const result = await chrome.runtime.sendMessage({
+      type: "downloadUrl", url: linkUrl.value.trim(), mode: linkMode.value
+    });
+    linkMessage.textContent = result?.ok
+      ? "İndirme başlatıldı. Durumunu aşağıdan takip edebilirsin."
+      : result?.message || "İndirme başlatılamadı.";
+    linkMessage.dataset.state = result?.ok ? "success" : "error";
+    linkMessage.hidden = false;
+    if (result?.ok) linkUrl.value = "";
+  } catch {
+    linkMessage.textContent = "Tarayıcı uzantısına bağlanılamadı. Uzantıyı yeniden yükle.";
+    linkMessage.dataset.state = "error";
+    linkMessage.hidden = false;
+  } finally {
+    linkSubmit.disabled = false;
+  }
+});
 
 chrome.storage.local.get("preferences").then(({ preferences = {} }) => {
   mode.value = preferences.mode ?? "video";

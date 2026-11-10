@@ -94,7 +94,10 @@ function parseVideoUrl(value) {
           ? url.searchParams.get("v")
           : ["shorts", "live", "embed", "v"].includes(path[1]) ? path[2] : null;
       if (!id || !/^[\w-]{11}$/.test(id)) return null;
-      return { url: `https://www.youtube.com/watch?v=${id}`, site: "YouTube" };
+      return {
+        url: `https://${domain === "music.youtube.com" ? "music" : "www"}.youtube.com/watch?v=${id}`,
+        site: domain === "music.youtube.com" ? "YouTube Music" : "YouTube"
+      };
     }
     return { url: url.href, site: domain };
   } catch {
@@ -108,32 +111,38 @@ function addHistory(job) {
   saveHistory();
 }
 
-async function beginDownload(candidate, title, fallback, cookies) {
+async function beginDownload(candidate, title, fallback, cookies, modeOverride) {
   await restored;
   const { preferences = {} } = await chrome.storage.local.get("preferences");
   const page = parseVideoUrl(fallback);
   const media = parseVideoUrl(candidate) ?? page;
-  if (media && active.has(media.url)) return;
+  if (media && active.has(media.url)) {
+    return { ok: false, message: "Bu bağlantının indirmesi zaten sürüyor." };
+  }
 
   const label = title?.trim();
   const job = {
     id: crypto.randomUUID(),
-    title: label && !/(?:https?:\/\/|www\.|[?&][\w-]+=)/i.test(label) ? label.slice(0, 180) : "Video",
+    title: label && !/(?:https?:\/\/|www\.|[?&][\w-]+=)/i.test(label)
+      ? label.slice(0, 180) : modeOverride === "audio" ? "Ses" : "Video",
     site: page?.site ?? media?.site ?? "",
     at: Date.now(),
     state: "running",
     percent: null
   };
 
-  if (!media || active.size >= parallelLimit) {
+  const spotify = media && /(^|\.)spotify\.com$|^spotify\.link$|^spoti\.fi$/.test(new URL(media.url).hostname);
+  if (!media || active.size >= parallelLimit || spotify) {
     job.state = "failed";
-    job.message = media
-      ? "Üç indirme zaten devam ediyor. Birinin tamamlanmasını bekleyip yeniden dene."
-      : "Bu adres bir video sayfası olarak açılamadı. Videoyu açtıktan sonra simgeye tıkla.";
+    job.message = spotify
+      ? "Spotify bağlantısından ses dosyası indirilemiyor. Spotify içeriği için uygulamanın çevrimdışı dinleme özelliğini kullan."
+      : media
+        ? "Üç indirme zaten devam ediyor. Birinin tamamlanmasını bekleyip yeniden dene."
+        : "Geçerli bir HTTP veya HTTPS içerik bağlantısı yapıştır.";
     addHistory(job);
     updateBadge(job.state);
     await openDashboard();
-    return;
+    return { ok: false, message: job.message };
   }
 
   let port;
@@ -142,7 +151,8 @@ async function beginDownload(candidate, title, fallback, cookies) {
   let retry = page?.url !== media.url ? page?.url : null;
   const settings = {
     quality: ["best", "1080", "720", "480"].includes(preferences.quality) ? preferences.quality : "best",
-    mode: ["video", "audio"].includes(preferences.mode) ? preferences.mode : "video",
+    mode: ["video", "audio"].includes(modeOverride) ? modeOverride
+      : ["video", "audio"].includes(preferences.mode) ? preferences.mode : "video",
     maxMinutes: [0, 10, 30, 60, 120].includes(preferences.maxMinutes) ? preferences.maxMinutes : 0
   };
   active.set(media.url, { job });
@@ -217,7 +227,17 @@ async function beginDownload(candidate, title, fallback, cookies) {
     }
   }
   connect(media.url);
+  return { ok: true };
 }
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (sender.id !== chrome.runtime.id || sender.url !== chrome.runtime.getURL("downloads.html")
+      || message?.type !== "downloadUrl") return;
+  beginDownload(message.url, undefined, undefined, undefined, message.mode)
+    .then(sendResponse)
+    .catch(() => sendResponse({ ok: false, message: "İndirme başlatılamadı. Yeniden dene." }));
+  return true;
+});
 
 function installMenus() {
   const webPages = ["http://*/*", "https://*/*"];
@@ -267,7 +287,7 @@ function findDirectVideo() {
 async function downloadFromTab(tab) {
   const page = parseVideoUrl(tab.url);
   let direct;
-  if (page && page.site !== "YouTube" && tab.id !== undefined) {
+  if (page && !page.site.startsWith("YouTube") && tab.id !== undefined) {
     try {
       const [result] = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
@@ -290,7 +310,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     openDashboard().catch(console.error);
   } else if (info.menuItemId === "download-video") {
     const page = info.frameUrl || info.pageUrl || tab?.url;
-    const source = parseVideoUrl(page)?.site === "YouTube" ? page : info.srcUrl;
+    const source = parseVideoUrl(page)?.site.startsWith("YouTube") ? page : info.srcUrl;
     beginDownload(source, tab?.title, page).catch(console.error);
   } else if (info.menuItemId === "download-link") {
     beginDownload(info.linkUrl).catch(console.error);
