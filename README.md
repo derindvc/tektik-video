@@ -35,7 +35,7 @@ YouTube desteği site değişikliklerinden ve videonun erişim durumundan etkile
 
 ## Güncelleme ve kaldırma
 
-- İndirmeler bittikten sonra `Kur.bat` dosyasını yeniden çalıştırarak yerel yardımcıyı ve indirme bileşenlerini güncelle. Eklenti dosyaları değiştiyse tarayıcının uzantılar sayfasından **Yeniden yükle** düğmesine bas.
+- İndirmeler bittikten sonra `Kur.bat` dosyasını yeniden çalıştırarak yerel yardımcıyı ve indirme bileşenlerini güncelle. Eklenti dosyaları değiştiyse tarayıcının uzantılar sayfasından **Yeniden yükle** düğmesine bas; açık **İndirmeler** sekmesini kapatıp tekrar aç.
 - Kaldırmak için önce tarayıcıdan uzantıyı kaldır, ardından bu klasörde PowerShell açıp `.\Kur.bat -Kaldir` komutunu çalıştır. İndirilen videoları Windows'taki kayıt klasöründe bulabilirsin.
 
 ## Lisans

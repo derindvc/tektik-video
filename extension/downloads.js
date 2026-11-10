@@ -25,6 +25,13 @@ linkForm.addEventListener("submit", async (event) => {
   linkSubmit.disabled = true;
   linkMessage.hidden = true;
   try {
+    const hostname = new URL(linkUrl.value.trim()).hostname.toLowerCase();
+    if (/(^|\.)spotify\.com$|^spotify\.link$|^spoti\.fi$/.test(hostname)) {
+      linkMessage.textContent = "Spotify bağlantısından ses dosyası indirilemiyor. Spotify'da çevrimdışı dinleme özelliğini kullan.";
+      linkMessage.dataset.state = "error";
+      linkMessage.hidden = false;
+      return;
+    }
     const result = await chrome.runtime.sendMessage({
       type: "downloadUrl", url: linkUrl.value.trim(), mode: linkMode.value
     });
@@ -34,8 +41,13 @@ linkForm.addEventListener("submit", async (event) => {
     linkMessage.dataset.state = result?.ok ? "success" : "error";
     linkMessage.hidden = false;
     if (result?.ok) linkUrl.value = "";
-  } catch {
-    linkMessage.textContent = "Tarayıcı uzantısına bağlanılamadı. Uzantıyı yeniden yükle.";
+  } catch (error) {
+    const detail = String(error?.message || "");
+    linkMessage.textContent = /context invalidated/i.test(detail)
+      ? "Bu İndirmeler sekmesi güncellemeden önce açılmış. Sekmeyi kapatıp eklentiden yeniden aç."
+      : /receiving end does not exist|message port closed|no response/i.test(detail)
+        ? "Uzantının arka planı güncel değil. Uzantılar sayfasında TekTık Video için Yeniden yükle'ye bas, ardından bu sekmeyi yenile."
+        : "Bağlantı kurulamadı. Uzantılar sayfasında TekTık Video'yu yeniden yükle ve İndirmeler ekranını tekrar aç.";
     linkMessage.dataset.state = "error";
     linkMessage.hidden = false;
   } finally {

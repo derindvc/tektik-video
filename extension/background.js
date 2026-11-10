@@ -231,8 +231,7 @@ async function beginDownload(candidate, title, fallback, cookies, modeOverride) 
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (sender.id !== chrome.runtime.id || sender.url !== chrome.runtime.getURL("downloads.html")
-      || message?.type !== "downloadUrl") return;
+  if (sender.id !== chrome.runtime.id || message?.type !== "downloadUrl") return;
   beginDownload(message.url, undefined, undefined, undefined, message.mode)
     .then(sendResponse)
     .catch(() => sendResponse({ ok: false, message: "İndirme başlatılamadı. Yeniden dene." }));
