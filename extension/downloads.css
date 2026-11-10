@@ -90,6 +90,19 @@ h1 { font-size: clamp(37px, 6vw, 56px); letter-spacing: -.055em; line-height: 1.
   font-size: 14px;
   margin-bottom: 18px;
 }
+.settings { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 20px; margin-bottom: 20px; }
+.settings-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 17px; }
+.settings-heading h2 { font-size: 18px; }
+.settings-heading p, .settings-note { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.settings-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.settings-grid label { display: grid; gap: 7px; font-size: 12px; font-weight: 650; }
+.settings select { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); font: inherit; }
+.settings select:disabled { opacity: .55; }
+.folder-setting { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); margin-top: 17px; padding-top: 16px; }
+.folder-setting div { display: grid; gap: 3px; min-width: 0; font-size: 13px; }
+.folder-setting span { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.folder-setting button { background: var(--purple-light); border: 0; border-radius: 8px; color: var(--purple-dark); padding: 9px 12px; font-weight: 650; cursor: pointer; white-space: nowrap; }
+.settings-note { margin-top: 12px; }
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) 276px; gap: 20px; padding-bottom: 42px; }
 .activity {
   align-self: start;
@@ -201,6 +214,8 @@ h1 { font-size: clamp(37px, 6vw, 56px); letter-spacing: -.055em; line-height: 1.
   .wrap { width: calc(100% - 36px); }
   .layout { grid-template-columns: minmax(0, 1fr); }
   .intro { padding-top: 32px; }
+  .settings-grid { grid-template-columns: 1fr; }
+  .settings-heading { display: block; }
 }
 
 @media (max-width: 440px) {

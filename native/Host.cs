@@ -8,13 +8,16 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Web.Script.Serialization;
+using System.Windows.Forms;
 using Microsoft.Win32.SafeHandles;
 
 internal static class Host
 {
-    private const int MaxRequestBytes = 16384;
+    private const int MaxRequestBytes = 262144;
     private const string ProgressPrefix = "TEKTIK_PROGRESS ";
     private const string FilePrefix = "TEKTIK_FILE ";
+    private const string DurationPrefix = "TEKTIK_DURATION ";
+    private const string SizePrefix = "TEKTIK_SIZE ";
     private static readonly Encoding Utf8 = new UTF8Encoding(false, true);
     private static readonly object OutputLock = new object();
     private static readonly JavaScriptSerializer Json = new JavaScriptSerializer {
@@ -25,9 +28,12 @@ internal static class Host
         ".mp4", ".m4v", ".mkv", ".webm", ".mov", ".avi", ".mpg", ".mpeg",
         ".3gp", ".3g2", ".wmv", ".flv", ".mts", ".m2ts", ".ogv", ".ts"
     };
+    private static readonly HashSet<string> AudioExtensions = new HashSet<string>(
+        StringComparer.OrdinalIgnoreCase) { ".mp3", ".m4a", ".opus", ".ogg", ".wav", ".flac", ".aac" };
     private static Stream output;
     private static int disconnected;
 
+    [STAThread]
     private static void Main()
     {
         output = Console.OpenStandardOutput();
@@ -47,6 +53,12 @@ internal static class Host
                     case "openFolder":
                         OpenFolder();
                         break;
+                    case "getFolder":
+                        Send(new { type = "folder", path = DownloadFolder() });
+                        break;
+                    case "chooseFolder":
+                        ChooseFolder();
+                        break;
                     case "download":
                         string url = ReadString(request, "url");
                         Uri uri;
@@ -59,7 +71,7 @@ internal static class Host
                             Error("Geçerli bir HTTP veya HTTPS video adresi gerekiyor.");
                             return;
                         }
-                        Download(uri.AbsoluteUri, input);
+                        Download(uri.AbsoluteUri, input, request);
                         break;
                     default:
                         Error("Bu işlem desteklenmiyor.");
@@ -158,8 +170,32 @@ internal static class Host
             Send(new { type = "opened" });
     }
 
+    private static void ChooseFolder()
+    {
+        using (var dialog = new FolderBrowserDialog())
+        {
+            dialog.Description = "Videoların kaydedileceği klasörü seç";
+            dialog.SelectedPath = DownloadFolder();
+            if (dialog.ShowDialog() != DialogResult.OK)
+            {
+                Send(new { type = "cancelled" });
+                return;
+            }
+            string path = Directory.CreateDirectory(dialog.SelectedPath).FullName;
+            File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "folder.txt"), path, Utf8);
+            Send(new { type = "folder", path = path });
+        }
+    }
+
     private static string DownloadFolder()
     {
+        string setting = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "folder.txt");
+        if (File.Exists(setting))
+        {
+            string chosen = File.ReadAllText(setting, Utf8).Trim();
+            if (Path.IsPathRooted(chosen) && Directory.Exists(chosen))
+                return chosen;
+        }
         var downloads = new Guid("374DE290-123F-4565-9164-39C4925E467B");
         IntPtr pointer;
         int result = SHGetKnownFolderPath(ref downloads, 0, IntPtr.Zero, out pointer);
@@ -178,8 +214,19 @@ internal static class Host
         return Directory.CreateDirectory(Path.Combine(root, "TekTik Video")).FullName;
     }
 
-    private static void Download(string url, BinaryReader input)
+    private static void Download(string url, BinaryReader input, Dictionary<string, object> request)
     {
+        string quality = ReadString(request, "quality") ?? "best";
+        string mode = ReadString(request, "mode") ?? "video";
+        object limitValue;
+        int maxMinutes = request.TryGetValue("maxMinutes", out limitValue) && limitValue is int ? (int)limitValue : 0;
+        if (!(quality == "best" || quality == "1080" || quality == "720" || quality == "480")
+            || !(mode == "video" || mode == "audio")
+            || !(maxMinutes == 0 || maxMinutes == 10 || maxMinutes == 30 || maxMinutes == 60 || maxMinutes == 120))
+        {
+            Error("İndirme ayarları geçersiz.");
+            return;
+        }
         string tools = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tools");
         string downloader = Path.Combine(tools, "yt-dlp.exe");
         string deno = Path.Combine(tools, "deno.exe");
@@ -196,9 +243,10 @@ internal static class Host
         try
         {
             File.SetAttributes(staging, File.GetAttributes(staging) | FileAttributes.Hidden);
+            string cookiesPath = WriteCookies(request, staging, url);
             var startInfo = new ProcessStartInfo {
                 FileName = downloader,
-                Arguments = BuildArguments(staging, tools, deno, url),
+                Arguments = BuildArguments(staging, tools, deno, url, quality, mode, maxMinutes, cookiesPath),
                 WorkingDirectory = tools,
                 CreateNoWindow = true,
                 UseShellExecute = false,
@@ -239,6 +287,10 @@ internal static class Host
                 {
                     if (line.StartsWith(FilePrefix, StringComparison.Ordinal))
                         stagedFile = Json.Deserialize<string>(line.Substring(FilePrefix.Length));
+                    else if (line.StartsWith(DurationPrefix, StringComparison.Ordinal))
+                        ReportMediaInfo("duration", line.Substring(DurationPrefix.Length));
+                    else if (line.StartsWith(SizePrefix, StringComparison.Ordinal))
+                        ReportMediaInfo("size", line.Substring(SizePrefix.Length));
                     else
                         ReportProgress(line);
                 }
@@ -254,12 +306,13 @@ internal static class Host
 
             if (stagedFile == null)
             {
-                Error("Bu sayfada indirilebilir bir video bulunamadı.");
+                Error(maxMinutes > 0 ? "Video seçilen süre sınırını aşıyor veya indirilebilir bir dosya bulunamadı."
+                    : "Bu sayfada indirilebilir bir video bulunamadı.");
                 return;
             }
             string path = Path.GetFullPath(stagedFile);
             if (!String.Equals(Path.GetDirectoryName(path), staging, StringComparison.OrdinalIgnoreCase)
-                || !VideoExtensions.Contains(Path.GetExtension(path)) || !File.Exists(path)
+                || !(mode == "audio" ? AudioExtensions : VideoExtensions).Contains(Path.GetExtension(path)) || !File.Exists(path)
                 || (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
             {
                 Error("Bu sayfadan desteklenen bir video dosyası alınamadı.");
@@ -276,23 +329,75 @@ internal static class Host
         }
     }
 
-    private static string BuildArguments(string staging, string tools, string deno, string url)
+    private static void ReportMediaInfo(string field, string raw)
     {
-        string[] arguments = {
+        double value;
+        if (Double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out value)
+            && value >= 0 && !Double.IsInfinity(value) && !Double.IsNaN(value))
+            Send(new { type = "info", field = field, value = value });
+    }
+
+    private static string WriteCookies(Dictionary<string, object> request, string staging, string url)
+    {
+        object value;
+        if (!request.TryGetValue("cookies", out value)) return null;
+        var entries = value as System.Collections.ArrayList;
+        if (entries == null || entries.Count > 100) throw new InvalidDataException();
+        string host = new Uri(url).Host;
+        string path = Path.Combine(staging, "cookies.txt");
+        using (var writer = new StreamWriter(path, false, Utf8))
+        {
+            writer.NewLine = "\r\n";
+            writer.WriteLine("# Netscape HTTP Cookie File");
+            foreach (object item in entries)
+            {
+                var cookie = item as Dictionary<string, object>;
+                if (cookie == null) throw new InvalidDataException();
+                string domain = ReadString(cookie, "domain") ?? "";
+                string name = ReadString(cookie, "name") ?? "";
+                string content = ReadString(cookie, "value") ?? "";
+                string cookiePath = ReadString(cookie, "path") ?? "/";
+                string bareDomain = domain.TrimStart('.');
+                if (!(host == bareDomain || host.EndsWith("." + bareDomain, StringComparison.OrdinalIgnoreCase))
+                    || String.IsNullOrEmpty(bareDomain) || name.Length > 256 || content.Length > 4096
+                    || name.IndexOfAny(new[] { '\r', '\n', '\t' }) >= 0
+                    || content.IndexOfAny(new[] { '\r', '\n', '\t' }) >= 0
+                    || cookiePath.IndexOfAny(new[] { '\r', '\n', '\t' }) >= 0)
+                    throw new InvalidDataException();
+                bool secure = cookie.ContainsKey("secure") && cookie["secure"] is bool && (bool)cookie["secure"];
+                writer.WriteLine(String.Join("\t", domain, domain.StartsWith(".") ? "TRUE" : "FALSE",
+                    cookiePath, secure ? "TRUE" : "FALSE", "0", name, content));
+            }
+        }
+        return path;
+    }
+
+    private static string BuildArguments(string staging, string tools, string deno, string url,
+        string quality, string mode, int maxMinutes, string cookiesPath)
+    {
+        var arguments = new List<string> {
             "--ignore-config", "--no-plugin-dirs", "--no-remote-components", "--no-playlist",
-            "--playlist-items", "1", "--match-filter", "!is_live", "--windows-filenames",
+            "--playlist-items", "1", "--match-filter", maxMinutes > 0
+                ? "!is_live & duration & duration <= " + (maxMinutes * 60) : "!is_live", "--windows-filenames",
             "--no-mtime", "--socket-timeout", "20", "--encoding", "utf-8",
             "--ffmpeg-location", tools, "--js-runtimes", "deno:" + deno,
-            "--format", "bv*+ba/b", "--merge-output-format", "mp4/mkv",
+            "--format", mode == "audio" ? "bestaudio/best" : quality == "best" ? "bv*+ba/b" :
+                "bv*[height<=" + quality + "]+ba/b[height<=" + quality + "]",
+            "--merge-output-format", "mp4/mkv",
             "--paths", staging, "--output", "%(title).100s.%(ext)s",
             "--color", "never", "--no-simulate", "--progress", "--newline",
             "--progress-delta", "0.75",
             "--progress-template", "download:" + ProgressPrefix + "%(progress._percent)s",
             "--progress-template", "postprocess:" + ProgressPrefix + "NA",
+            "--print", "before_dl:" + DurationPrefix + "%(duration)s",
+            "--print", "before_dl:" + SizePrefix + "%(filesize,filesize_approx)s",
             "--print", "after_move:" + FilePrefix + "%(filepath)j",
-            "--", url
         };
-        return String.Join(" ", Array.ConvertAll(arguments, QuoteArgument));
+        if (mode == "audio") arguments.AddRange(new[] { "--extract-audio", "--audio-format", "mp3" });
+        if (cookiesPath != null) arguments.AddRange(new[] { "--cookies", cookiesPath });
+        arguments.Add("--");
+        arguments.Add(url);
+        return String.Join(" ", Array.ConvertAll(arguments.ToArray(), QuoteArgument));
     }
 
     // ProcessStartInfo uses one command-line string on .NET Framework. Escape each
@@ -338,9 +443,11 @@ internal static class Host
             return "Bu video DRM korumalı.";
         if (line.IndexOf("unsupported url", StringComparison.OrdinalIgnoreCase) >= 0)
             return "Bu sayfa video indirmeyi desteklemiyor.";
+        if (line.IndexOf("Requested format is not available", StringComparison.OrdinalIgnoreCase) >= 0)
+            return "Seçilen kalite bu videoda bulunamadı. Ayarlardan En iyi mevcut kalite seçeneğini dene.";
         if (line.IndexOf("sign in", StringComparison.OrdinalIgnoreCase) >= 0
             || line.IndexOf("private video", StringComparison.OrdinalIgnoreCase) >= 0)
-            return "Kaynak site bu video için oturum açılmasını veya ek doğrulama istiyor.";
+            return "Site oturum açılmasını istiyor. Video sayfasında sağ tıklayıp Bu sitenin oturum çerezleriyle indir seçeneğini dene.";
         if (line.IndexOf("HTTP Error 429", StringComparison.OrdinalIgnoreCase) >= 0)
             return "Kaynak site çok fazla istek aldı. Bir süre sonra yeniden dene.";
         return null;

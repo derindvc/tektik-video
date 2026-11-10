@@ -108,8 +108,9 @@ function addHistory(job) {
   saveHistory();
 }
 
-async function beginDownload(candidate, title, fallback) {
+async function beginDownload(candidate, title, fallback, cookies) {
   await restored;
+  const { preferences = {} } = await chrome.storage.local.get("preferences");
   const page = parseVideoUrl(fallback);
   const media = parseVideoUrl(candidate) ?? page;
   if (media && active.has(media.url)) return;
@@ -139,6 +140,11 @@ async function beginDownload(candidate, title, fallback) {
   let finished = false;
   let lastProgressAt = 0;
   let retry = page?.url !== media.url ? page?.url : null;
+  const settings = {
+    quality: ["best", "1080", "720", "480"].includes(preferences.quality) ? preferences.quality : "best",
+    mode: ["video", "audio"].includes(preferences.mode) ? preferences.mode : "video",
+    maxMinutes: [0, 10, 30, 60, 120].includes(preferences.maxMinutes) ? preferences.maxMinutes : 0
+  };
   active.set(media.url, { job });
   addHistory(job);
   updateBadge();
@@ -188,6 +194,10 @@ async function beginDownload(candidate, title, fallback) {
         } else if (message.type === "completed") {
           const filename = typeof message.filename === "string" ? message.filename : "";
           finish("done", { filename: filename.slice(0, 260), percent: 100 });
+        } else if (message.type === "info" && Number.isFinite(message.value)) {
+          if (message.field === "duration") job.duration = Math.round(message.value);
+          if (message.field === "size") job.size = Math.round(message.value);
+          saveHistory();
         } else if (message.type === "error") {
           if (retry && job.percent === null) {
             const nextUrl = retry;
@@ -201,7 +211,7 @@ async function beginDownload(candidate, title, fallback) {
           finish("failed", { message: detail.slice(0, 450) || "Video indirilemedi." });
         }
       });
-      connection.postMessage({ type: "download", url });
+      connection.postMessage({ type: "download", url, ...settings, ...(cookies ? { cookies } : {}) });
     } catch {
       connectionFailed(responded);
     }
@@ -221,6 +231,12 @@ function installMenus() {
     id: "download-link",
     title: "Bu bağlantıdaki videoyu indir",
     contexts: ["link"],
+    documentUrlPatterns: webPages
+  });
+  chrome.contextMenus.create({
+    id: "download-with-cookies",
+    title: "Bu sitenin oturum çerezleriyle indir",
+    contexts: ["page", "video"],
     documentUrlPatterns: webPages
   });
   chrome.contextMenus.create({
@@ -278,5 +294,15 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     beginDownload(source, tab?.title, page).catch(console.error);
   } else if (info.menuItemId === "download-link") {
     beginDownload(info.linkUrl).catch(console.error);
+  } else if (info.menuItemId === "download-with-cookies") {
+    const page = parseVideoUrl(info.pageUrl || tab?.url);
+    if (!page) return;
+    const origin = new URL(page.url).origin + "/*";
+    chrome.permissions.request({ permissions: ["cookies"], origins: [origin] }).then(async (granted) => {
+      if (!granted) return;
+      const cookies = await chrome.cookies.getAll({ url: page.url });
+      await beginDownload(page.url, tab?.title, null, cookies.map(({ domain, path, name, value, secure }) =>
+        ({ domain, path, name, value, secure })));
+    }).catch(console.error);
   }
 });

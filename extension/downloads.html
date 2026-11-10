@@ -54,6 +54,30 @@
 
     <p id="folder-message" class="notice" role="status" hidden></p>
 
+    <section class="settings" aria-labelledby="settings-title">
+      <div class="settings-heading">
+        <h2 id="settings-title">İndirme ayarları</h2>
+        <p>Seçimlerin sonraki tek tık indirmelerde kullanılır.</p>
+      </div>
+      <div class="settings-grid">
+        <label>İçerik türü
+          <select id="mode"><option value="video">Video ve ses</option><option value="audio">Yalnızca ses (MP3)</option></select>
+        </label>
+        <label>Video kalitesi
+          <select id="quality"><option value="best">En iyi mevcut kalite</option><option value="1080">En fazla 1080p</option><option value="720">En fazla 720p</option><option value="480">En fazla 480p</option></select>
+        </label>
+        <label>Video süresi
+          <select id="max-minutes"><option value="0">Sınır yok</option><option value="10">En fazla 10 dakika</option><option value="30">En fazla 30 dakika</option><option value="60">En fazla 1 saat</option><option value="120">En fazla 2 saat</option></select>
+        </label>
+      </div>
+      <div class="folder-setting">
+        <div><strong>Kayıt klasörü</strong><span id="folder-path">İndirilenler → TekTik Video</span></div>
+        <button type="button" id="choose-folder">Klasör seç</button>
+      </div>
+      <p class="settings-note">Süre sınırı videonun uzunluğunu denetler. Süresi bilinmeyen videolar sınır seçiliyken elenir. İndirme süresi bağlantı hızına bağlıdır. Tahmini boyut ve süre mevcutsa gösterilir.</p>
+      <p class="settings-note">Oturum isteyen bir sayfada sağ tıkla ve <strong>Bu sitenin oturum çerezleriyle indir</strong> seçeneğini kullan. Tarayıcı yalnızca o site için çerez izni ister.</p>
+    </section>
+
     <div class="layout">
       <section class="activity" aria-labelledby="activity-title">
         <header class="activity-header">

@@ -28,7 +28,7 @@ function Get-VerifiedReleaseAsset($Repository, $Pattern) {
         $asset.digest -notmatch '^sha256:([a-f0-9]{64})$') {
         throw "$Repository için geçerli indirme adresi veya SHA-256 bilgisi bulunamadı."
     }
-    [pscustomobject]@{ Url = $asset.browser_download_url; Sha256 = $Matches[1] }
+    [pscustomobject]@{ Url = $asset.browser_download_url; Sha256 = $Matches[1]; Size = [long]$asset.size }
 }
 
 function Save-ReleaseTools($Package, $Asset, $Staging, $Previous) {
@@ -51,7 +51,26 @@ function Save-ReleaseTools($Package, $Asset, $Staging, $Previous) {
 
     Write-Host "  $($Package.Name) indiriliyor…"
     $downloadPath = Join-Path $Staging $Package.Name
-    Invoke-WebRequest -UseBasicParsing -Uri $Asset.Url -OutFile $downloadPath -TimeoutSec 360
+    if ($Asset.Size -gt 20000000) {
+        $stream = [IO.File]::Create($downloadPath)
+        try {
+            for ($start = [long]0; $start -lt $Asset.Size; $start += 8388608) {
+                $end = [Math]::Min($start + 8388607, $Asset.Size - 1)
+                $part = Join-Path $Staging 'download.part'
+                & curl.exe --fail --location --silent --show-error --retry 2 --connect-timeout 20 --max-time 120 `
+                    --range "$start-$end" --output $part $Asset.Url
+                if ($LASTEXITCODE -ne 0 -or (Get-Item -LiteralPath $part).Length -ne ($end - $start + 1)) {
+                    throw "$($Package.Name) parçası indirilemedi."
+                }
+                $inputStream = [IO.File]::OpenRead($part)
+                try { $inputStream.CopyTo($stream) } finally { $inputStream.Dispose() }
+                Remove-Item -LiteralPath $part
+            }
+        } finally { $stream.Dispose() }
+    } else {
+        & curl.exe --fail --location --silent --show-error --retry 2 --connect-timeout 20 --max-time 120 --output $downloadPath $Asset.Url
+        if ($LASTEXITCODE -ne 0) { throw "$($Package.Name) indirilemedi." }
+    }
     if ((Get-FileHash -LiteralPath $downloadPath).Hash -ne $Asset.Sha256) {
         throw "$($Package.Name) için SHA-256 doğrulaması başarısız."
     }
@@ -86,7 +105,7 @@ try {
                 Remove-Item -LiteralPath $key
             }
         }
-        foreach ($path in @($hostPath, $manifestPath, $statePath)) {
+        foreach ($path in @($hostPath, $manifestPath, $statePath, (Join-Path $installRoot 'folder.txt'))) {
             if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path }
         }
         foreach ($file in @('yt-dlp.exe', 'deno.exe', 'ffmpeg.exe', 'ffprobe.exe')) {
@@ -112,7 +131,7 @@ try {
     $staging = [IO.Path]::GetFullPath((Join-Path $tempRoot ('TekTikVideo-' + [guid]::NewGuid().ToString('N'))))
     New-Item -ItemType Directory -Path $staging | Out-Null
     $stagedHost = Join-Path $staging 'TekTikVideo.Host.exe'
-    & $csc /nologo /optimize+ /target:winexe /codepage:65001 /r:System.Web.Extensions.dll "/out:$stagedHost" (Join-Path $PSScriptRoot 'native\Host.cs')
+    & $csc /nologo /optimize+ /target:winexe /codepage:65001 /r:System.Web.Extensions.dll /r:System.Windows.Forms.dll "/out:$stagedHost" (Join-Path $PSScriptRoot 'native\Host.cs')
     if ($LASTEXITCODE -ne 0) { throw 'Yerel yardımcı derlenemedi.' }
 
     Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem

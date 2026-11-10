@@ -2,7 +2,7 @@
 
 TekTık Video, Chrome ve Edge için bir Windows video indiricisidir. Eklenti simgesine bastığında açık sayfanın adresi bilgisayarındaki yerel yardımcıya iletilir ve indirme hemen başlar. Dosyalar Windows'un **İndirilenler → TekTik Video** klasörüne kaydedilir.
 
-![TekTık Video indirme ekranı](docs/indirmeler.png)
+![TekTık Video indirme ve ayar ekranı](docs/indirmeler.png)
 
 ## İlk kurulum
 
@@ -15,13 +15,17 @@ TekTık Video, Chrome ve Edge için bir Windows video indiricisidir. Eklenti sim
 1. İndirme iznin olan bir videoyu aç ve araç çubuğundaki **TekTık Video** simgesine bir kez bas.
 2. İlerlemeyi simge rozetinden takip et. Simgeye sağ tıklayıp **İndirmeleri göster** seçeneğini açarak durumu görebilir ve kayıt klasörüne gidebilirsin. Bir video veya video bağlantısına sağ tıklayarak da indirmeyi başlatabilirsin.
 
+**İndirmeleri göster** ekranında sonraki indirmeler için video kalitesini, yalnızca ses (MP3) seçimini, en uzun video süresini ve kayıt klasörünü ayarlayabilirsin. Varsayılan seçim en iyi mevcut kalite, video ve ses, sınırsız video süresi ve İndirilenler klasörüdür. Süre sınırı seçildiğinde süresini bildirmeyen videolar da elenir. Video süresi ile tahmini dosya boyutu kaynak tarafından sağlanırsa indirme satırında gösterilir. Dosya boyutu tahmini kesin bir indirme kotası değildir.
+
+Oturum isteyen bir sitede video sayfasına sağ tıklayıp **Bu sitenin oturum çerezleriyle indir** seçeneğini kullanabilirsin. Tarayıcı ilgili site için çerez erişim izni ister. Bu işlem site oturumunu yalnızca o indirmede yerel yardımcıya aktarır. Çerezler geçici dosyada tutulur ve işlem sonunda silinir. Oturumla indirme bazı sitelerde yine başarısız olabilir.
+
 ## Destek kapsamı
 
 - Açık sekmedeki YouTube video ve Shorts adresleri.
 - Doğrudan video dosyaları ve yt-dlp'nin desteklediği herkese açık video sayfaları.
 - Chrome ve Edge'de Windows x64 kullanımı.
 
-YouTube desteği site değişikliklerinden ve videonun erişim durumundan etkilenebilir. Canlı yayınlar, giriş isteyen videolar ve DRM korumalı içerikler desteklenmez. Yalnızca indirmene izin verilen içerikleri indir. [YouTube Hizmet Şartları](https://www.youtube.com/t/terms)
+YouTube desteği site değişikliklerinden ve videonun erişim durumundan etkilenebilir. Canlı yayınlar ve DRM korumalı içerikler desteklenmez. Yalnızca indirmene izin verilen içerikleri indir. [YouTube Hizmet Şartları](https://www.youtube.com/t/terms)
 
 İndirme bağlantısı, yalnızca tıklama üzerine tarayıcıdan yerel yardımcıya aktarılır. Video kendi kaynağından indirilir. Eklenti geniş site izni istemez. İndirme geçmişinde video adresi yerine site adı, başlık, durum ve dosya bilgisi görünür. İndirme sürerken tarayıcıyı açık tut.
 
