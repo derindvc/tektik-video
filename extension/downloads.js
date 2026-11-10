@@ -27,7 +27,7 @@ linkForm.addEventListener("submit", async (event) => {
   try {
     const hostname = new URL(linkUrl.value.trim()).hostname.toLowerCase();
     if (/(^|\.)spotify\.com$|^spotify\.link$|^spoti\.fi$/.test(hostname)) {
-      linkMessage.textContent = "Spotify bağlantısından ses dosyası indirilemiyor. Spotify'da çevrimdışı dinleme özelliğini kullan.";
+      linkMessage.textContent = "Spotify şarkıları doğrudan MP3 olarak indirilemiyor. Spotify'da çevrimdışı dinleme özelliğini kullan.";
       linkMessage.dataset.state = "error";
       linkMessage.hidden = false;
       return;

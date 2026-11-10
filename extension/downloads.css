@@ -93,7 +93,7 @@ h1 { font-size: clamp(37px, 6vw, 56px); letter-spacing: -.055em; line-height: 1.
 }
 .link-entry { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 20px; margin-bottom: 20px; }
 .link-entry h2 { font-size: 20px; margin-top: 5px; }
-.link-entry > div > p:last-child, .link-note { color: var(--muted); font-size: 12px; line-height: 1.5; margin-top: 7px; }
+.link-entry > div > p:last-child { color: var(--muted); font-size: 12px; line-height: 1.5; margin-top: 7px; }
 .link-form { display: grid; grid-template-columns: minmax(0, 1fr) 105px 95px; gap: 9px; margin-top: 16px; }
 .link-form input, .link-form select { min-width: 0; border: 1px solid var(--line); border-radius: 9px; padding: 11px 12px; background: #fff; color: var(--ink); font: inherit; font-size: 13px; }
 .link-form input:focus-visible, .link-form select:focus-visible { outline: 3px solid #917afa; outline-offset: 2px; }

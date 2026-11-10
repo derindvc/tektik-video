@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TekTık Video",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxNnVXasmg0sdKJTyXIII96P77ul6sH45VBfZLQ8xvLGICTVz0R+oGvRKbf+KhU3HKbHZd1jgsodI6ENogte/HVwmjMsBaWRqTWzihlmyhWXsUnlnoi5DC5VD3hTQl3Kkl+4rxwGygUc5Lx6WxXVr2Ij26ShMlwelsJbnSZac0m5IXfxU4OzImDYpfcFrIKl2xejrf+fdaKOC2k4ZUTFX/rFcIQtMaLztxxsgc9Gt5lJiyV5jP/RrYsd0H5e/eArhrxZeQZB5ZQF37uvSvEogKYrEQ32YwyX8gNlIKRxFThLw9fxDtw3z2EXsYvhBVb9NE2KkyjZM92dvzMchBpXO2wIDAQAB",
   "minimum_chrome_version": "105",
   "description": "Açık videoyu tek tıkla bilgisayarına indir.",
